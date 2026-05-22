@@ -10,6 +10,8 @@ from typing import Dict, Tuple, List
 ############################################
 ############################################
 
+_debug_first_step = True  # DEBUG: logs only the first step of the first trajectory
+
 
 def sample_trajectory(
     env: gym.Env, policy: MLPPolicy, max_length: int, render: bool = False
@@ -29,15 +31,29 @@ def sample_trajectory(
                 cv2.resize(img, dsize=(250, 250), interpolation=cv2.INTER_CUBIC)
             )
 
-        # TODO use the most recent ob to decide what to do
-        ac = None
+        # Get action from policy
+        ac = policy.get_action(ob)
 
-        # TODO: take that action and get reward and next ob
-        next_ob, rew, done, info = None, None, None, None
+        # Take action and get reward and next observation
+        next_ob, rew, done, info = env.step(ac)
 
-        # TODO rollout can end due to done, or due to max_length
+        # Rollout can end due to done, or due to max_length
         steps += 1
-        rollout_done = None
+        rollout_done = done or (steps >= max_length)
+
+        # DEBUG: print shapes and values for the very first step of the first trajectory
+        global _debug_first_step
+        if _debug_first_step:
+            print("\n" + "=" * 60)
+            print("DEBUG [sample_trajectory] — First step of first trajectory")
+            print(f"  Observation shape:       {ob.shape}  dtype: {ob.dtype}")
+            print(f"  Action:                  {ac}  (shape: {np.array(ac).shape})")
+            print(f"  Reward:                  {rew}")
+            print(f"  Next obs shape:          {next_ob.shape}")
+            print(f"  Done (env signal):       {done}")
+            print(f"  Rollout done:            {rollout_done}  (steps={steps}, max_length={max_length})")
+            print("=" * 60)
+            _debug_first_step = False
 
         # record result of taking that action
         obs.append(ob)
